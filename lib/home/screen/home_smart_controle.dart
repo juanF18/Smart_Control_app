@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smart_control_hub_app/home/components/smart_control_card.dart';
 import 'package:smart_control_hub_app/home/components/smart_info_card.dart';
+import 'package:smart_control_hub_app/home/services/smart_home_services.dart';
 
 class SmartHomeControl extends StatefulWidget {
   const SmartHomeControl({super.key});
@@ -13,6 +14,32 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
   bool isLightOn = false;
   bool isDoorOpen = false;
   bool isFanOn = false;
+
+  late SmartHomeServices smartHomeService;
+
+  @override
+  void initState() {
+    smartHomeService =
+        SmartHomeServices('broker.hivemq.com', 'HomeSmartApp', 'sensorData');
+    _connectToMqtt();
+    super.initState();
+  }
+
+  Future<void> _connectToMqtt() async {
+    await smartHomeService.connectToMqtt();
+  }
+
+  void _printValues() async {
+    final String message = '$isLightOn|$isDoorOpen|$isFanOn';
+    await smartHomeService.sendMessage(message);
+  }
+
+  @override
+  void dispose() {
+    smartHomeService.disconnectFromMqtt();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,9 +49,10 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
           'SmartControl Hub',
           style: TextStyle(
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.grey[600],
+        backgroundColor: Colors.black,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -49,6 +77,7 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
                   setState(() {
                     isLightOn = valueLight;
                   });
+                  _printValues();
                 }),
             SmartControlCard(
                 label: 'Puerta',
@@ -58,6 +87,7 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
                   setState(() {
                     isDoorOpen = value;
                   });
+                  _printValues();
                 }),
             SmartControlCard(
                 label: 'Ventilador',
@@ -67,6 +97,7 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
                   setState(() {
                     isFanOn = value;
                   });
+                  _printValues();
                 }),
           ],
         ),
