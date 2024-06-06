@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:smart_control_hub_app/home/components/smart_control_card.dart';
 import 'package:smart_control_hub_app/home/components/smart_info_card.dart';
@@ -14,23 +16,35 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
   bool isLightOn = false;
   bool isDoorOpen = false;
   bool isFanOn = false;
+  bool isLEDsOn = false;
+  String temperature = "0.0";
+  String humidity = "0.0";
 
   late SmartHomeServices smartHomeService;
 
   @override
   void initState() {
-    smartHomeService =
-        SmartHomeServices('broker.hivemq.com', 'HomeSmartApp', 'sensorData');
+    smartHomeService = SmartHomeServices(
+        'broker.hivemq.com', 'HomeSmartApp', 'chimbadaAccion');
     _connectToMqtt();
     super.initState();
   }
 
   Future<void> _connectToMqtt() async {
     await smartHomeService.connectToMqtt();
+    await smartHomeService.subscribeToTopic('chimbada', _onMessageReceived);
+  }
+
+  void _onMessageReceived(String message) {
+    final data = jsonDecode(message);
+    setState(() {
+      temperature = data['temp'].toString();
+      humidity = data['hum'].toString();
+    });
   }
 
   void _printValues() async {
-    final String message = '$isLightOn|$isDoorOpen|$isFanOn';
+    final String message = '$isLightOn|$isDoorOpen|$isFanOn|$isLEDsOn';
     await smartHomeService.sendMessage(message);
   }
 
@@ -61,13 +75,15 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
           children: [
-            const SmartInfoCard(
+            SmartInfoCard(
               label: "Humedad",
               icon: Icons.water_drop,
+              value: '$humidity %',
             ),
-            const SmartInfoCard(
+            SmartInfoCard(
               label: "Temperatura",
               icon: Icons.thermostat,
+              value: '$temperature °C',
             ),
             SmartControlCard(
                 label: 'Luz',
@@ -90,15 +106,27 @@ class _SmartHomeControlState extends State<SmartHomeControl> {
                   _printValues();
                 }),
             SmartControlCard(
-                label: 'Ventilador',
-                icon: Icons.mode_fan_off,
-                initialValue: isLightOn,
-                onChanged: (value) {
-                  setState(() {
-                    isFanOn = value;
-                  });
-                  _printValues();
-                }),
+              label: 'Ventilador',
+              icon: Icons.mode_fan_off,
+              initialValue: isLightOn,
+              onChanged: (value) {
+                setState(() {
+                  isFanOn = value;
+                });
+                _printValues();
+              },
+            ),
+            SmartControlCard(
+              label: "LED's",
+              icon: Icons.lightbulb_circle,
+              initialValue: isLightOn,
+              onChanged: (value) {
+                setState(() {
+                  isLEDsOn = value;
+                });
+                _printValues();
+              },
+            ),
           ],
         ),
       ),

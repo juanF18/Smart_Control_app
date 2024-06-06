@@ -18,4 +18,10 @@ class SmartHomeServices {
   Future<void> sendMessage(String message) async {
     await _mqttRepository.publishMessage(topic, message);
   }
+
+  Future<void> subscribeToTopic(
+      String topic, Function(String) onMessage) async {
+    _mqttRepository.onMessageReceived = onMessage;
+    await _mqttRepository.subscribe(topic);
+  }
 }
